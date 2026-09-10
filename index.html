@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flores Amarillas para Yadix 🌻🐰</title>
+    <style>
+        /* --- ESTILOS GENERALES --- */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Georgia', serif;
+            touch-action: none; /* Evita el scroll táctil en móviles */
+        }
+
+        /* --- PANTALLA 1: LA TARJETA INICIAL --- */
+        .card-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #b8860b 0%, #3d2100 70%, #1a0f00 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: opacity 1s ease, transform 1s ease;
+        }
+
+        .card-screen.hidden {
+            opacity: 0;
+            transform: scale(1.1);
+            pointer-events: none;
+        }
+
+        .heart-bg {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(15px);
+            animation: pulse 3s infinite alternate;
+        }
+
+        .content {
+            position: relative;
+            z-index: 3;
+            text-align: center;
+            width: 100%;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .infinity {
+            font-size: 2rem;
+            color: #ffd700;
+            display: block;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px #ffd700;
+        }
+
+        .love-you {
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            color: #e6c27a;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .love-you::before, .love-you::after {
+            content: "";
+            width: 30px;
+            height: 1px;
+            background: #e6c27a;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #ffffff;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-style: italic;
+            color: #ffd700;
+            margin: 5px 0 25px 0;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+        }
+
+        /* --- EL CONEJITO DIBUJADO EN CÓDIGO (SVG) --- */
+        .rabbit-svg {
+            width: 220px;
+            height: 220px;
+            margin: 0 auto 30px;
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .btn {
+            background: linear-gradient(to right, #ffcc00, #ff9900);
+            border: none;
+            padding: 15px 45px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(255, 153, 0, 0.5);
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px rgba(255, 153, 0, 0.8);
+        }
+
+        /* --- PANTALLA 2: EL UNIVERSO 3D --- */
+        .universe-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 1s ease;
+            pointer-events: none;
+        }
+
+        .universe-screen.active {
+            opacity: 1;
+            pointer-events: auto;
+            z-index: 5;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 215, 0, 0.8);
+            font-size: 1rem;
+            pointer-events: none;
+            text-shadow: 0 0 10px #000;
+            animation: fadeOut 6s forwards;
+            z-index: 100;
+            text-align: center;
+        }
+
+        .loading-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255, 215, 0, 0.7);
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            z-index: 6;
+        }
+
+        .music-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(to right, #ffcc00, #ff9900);
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 153, 0, 0.5);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.9;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .music-btn:hover {
+            transform: scale(1.08);
+            opacity: 1;
+        }
+
+        .music-btn.muted {
+            filter: grayscale(1);
+            opacity: 0.6;
+        }
+
+        .error-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffd700;
+            font-size: 1rem;
+            text-align: center;
+            padding: 0 30px;
+            display: none;
+            z-index: 7;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            100% { transform: scale(1.1); opacity: 0.9; }
+        }
+        @keyframes fadeOut {
+            0% { opacity: 0; }
+            15% { opacity: 1; }
+            85% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========================================== -->
+    <!-- PANTALLA 1: LA TARJETA CON EL CONEJITO     -->
+    <!-- ========================================== -->
+    <div class="card-screen" id="cardScreen">
+        <div class="heart-bg"></div>
+
+        <div class="content">
+            <span class="infinity">∞</span>
+            <div class="love-you">MEJORES AMIGAS</div>
+            <h1>Flores Amarillas</h1>
+            <h2>para Yadix</h2>
+
+            <!-- EL CONEJITO DIBUJADO EN SVG -->
+            <div class="rabbit-svg">
+                <svg viewBox="0 0 200 200" width="100%" height="100%">
+                    <!-- Orejas -->
+                    <ellipse cx="70" cy="60" rx="15" ry="45" fill="#ffffff" stroke="#333" stroke-width="3"/>
+                    <ellipse cx="70" cy="60" rx="6" ry="30" fill="#ffb6c1" stroke="none"/>
+                    <ellipse cx="130" cy="60" rx="15" ry="45" fill="#ffffff" stroke="#333" stroke-width="3"/>
+                    <ellipse cx="130" cy="60" rx="6" ry="30" fill="#ffb6c1" stroke="none"/>
+                    <!-- Cuerpo -->
+                    <ellipse cx="100" cy="140" rx="55" ry="60" fill="#ffffff" stroke="#333" stroke-width="3"/>
+                    <!-- Carita -->
+                    <circle cx="80" cy="110" r="4" fill="#333"/>
+                    <circle cx="120" cy="110" r="4" fill="#333"/>
+                    <ellipse cx="100" cy="120" rx="6" ry="4" fill="#ffb6c1"/>
+                    <path d="M 95 125 Q 100 130 105 125" fill="none" stroke="#333" stroke-width="2"/>
+                    <!-- Ramo de Flores Amarillas -->
+                    <circle cx="70" cy="150" r="22" fill="#FFD700" stroke="#333" stroke-width="2"/>
+                    <circle cx="70" cy="150" r="8" fill="#FF8C00"/>
+                    <circle cx="130" cy="150" r="22" fill="#FFD700" stroke="#333" stroke-width="2"/>
+                    <circle cx="130" cy="150" r="8" fill="#FF8C00"/>
+                    <circle cx="100" cy="160" r="25" fill="#FFD700" stroke="#333" stroke-width="2"/>
+                    <circle cx="100" cy="160" r="10" fill="#FF8C00"/>
+                    <circle cx="80" cy="175" r="20" fill="#FFD700" stroke="#333" stroke-width="2"/>
+                    <circle cx="80" cy="175" r="7" fill="#FF8C00"/>
+                    <circle cx="120" cy="175" r="20" fill="#FFD700" stroke="#333" stroke-width="2"/>
+                    <circle cx="120" cy="175" r="7" fill="#FF8C00"/>
+                    <circle cx="100" cy="185" r="18" fill="#FFD700" stroke="#333" stroke-width="2"/>
+                    <circle cx="100" cy="185" r="6" fill="#FF8C00"/>
+                    <!-- Patitas -->
+                    <ellipse cx="75" cy="195" rx="15" ry="10" fill="#ffffff" stroke="#333" stroke-width="3"/>
+                    <ellipse cx="125" cy="195" rx="15" ry="10" fill="#ffffff" stroke="#333" stroke-width="3"/>
+                </svg>
+            </div>
+
+            <button class="btn" id="startBtn">
+                CLICK AQUI <span>→</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- PANTALLA 2: EL UNIVERSO 3D                 -->
+    <!-- ========================================== -->
+    <div class="universe-screen" id="universeScreen">
+        <div id="canvas-container"></div>
+        <div class="loading-msg" id="loadingMsg">cargando el universo...</div>
+        <div class="error-msg" id="errorMsg">No se pudo cargar el universo 3D en este dispositivo.<br>Intenta abrir esta página en Chrome o Safari con conexión a internet.</div>
+        <div class="hint">Arrastra con tu dedo para girar el universo 🌌<br>Usa dos dedos para hacer zoom</div>
+        <div id="ytPlayerBox" style="position:fixed; bottom:20px; right:20px; width:220px; height:124px; border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.6); z-index:19;">
+            <div id="ytPlayer" style="width:100%; height:100%;"></div>
+        </div>
+    </div>
+
+    <!-- MÚSICA DE FONDO (YouTube) -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+
+    <!-- LIBRERÍAS 3D -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- LÓGICA DE CAMBIO DE PANTALLA ---
+        const cardScreen = document.getElementById('cardScreen');
+        const universeScreen = document.getElementById('universeScreen');
+        const startBtn = document.getElementById('startBtn');
+        const loadingMsg = document.getElementById('loadingMsg');
+        const errorMsg = document.getElementById('errorMsg');
+        let isUniverseStarted = false;
+
+        // --- MÚSICA DE FONDO ---
+        let ytPlayer = null;
+        const ytPlayerBox = document.getElementById('ytPlayerBox');
+
+        window.onYouTubeIframeAPIReady = function () {
+            ytPlayer = new YT.Player('ytPlayer', {
+                videoId: 'qOhVBs4u3W8',
+                playerVars: { autoplay: 0, controls: 1, loop: 1, playlist: 'qOhVBs4u3W8', playsinline: 1 }
+            });
+        };
+
+        startBtn.addEventListener('click', () => {
+            // Ocultar tarjeta y mostrar universo
+            cardScreen.classList.add('hidden');
+            universeScreen.classList.add('active');
+
+
+            // Iniciar el motor 3D solo cuando se hace clic
+            if (!isUniverseStarted) {
+                isUniverseStarted = true;
+                setTimeout(() => {
+                    try {
+                        initThreeJS();
+                        loadingMsg.style.display = 'none';
+                    } catch (err) {
+                        console.error(err);
+                        loadingMsg.style.display = 'none';
+                        errorMsg.style.display = 'block';
+                    }
+                }, 800); // Esperar a que la transición CSS termine
+            }
+        });
+
+        // --- MOTOR 3D (THREE.JS) ---
+        function initThreeJS() {
+            const container = document.getElementById('canvas-container');
+
+            // Comprobación de soporte WebGL
+            if (!window.WebGLRenderingContext) {
+                throw new Error('WebGL no soportado');
+            }
+
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x03030a);
+            scene.fog = new THREE.FogExp2(0x03030a, 0.0022);
+
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 3000);
+            camera.position.set(0, 32, 68);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // Controles táctiles
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.06;
+            controls.enableZoom = true;
+            controls.zoomSpeed = 1.1;
+            controls.enablePan = false;
+            controls.minDistance = 18;
+            controls.maxDistance = 160;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.6;
+            controls.maxPolarAngle = Math.PI * 0.85;
+            controls.minPolarAngle = Math.PI * 0.15;
+
+            // Luces
+            scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+            const sunLight = new THREE.PointLight(0xffaa33, 4.5, 220, 2);
+            sunLight.position.set(0, 0, 0);
+            scene.add(sunLight);
+
+            // --- EL SOL CENTRAL (NÚCLEO DE LA GALAXIA) ---
+            const sunGeo = new THREE.SphereGeometry(4.2, 64, 64);
+            const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff3c4 });
+            const sun = new THREE.Mesh(sunGeo, sunMat);
+            scene.add(sun);
+
+            // Capas de resplandor (glow) para un núcleo más realista
+            function makeGlow(radius, color, opacity) {
+                const g = new THREE.SphereGeometry(radius, 32, 32);
+                const m = new THREE.MeshBasicMaterial({
+                    color, transparent: true, opacity,
+                    blending: THREE.AdditiveBlending, depthWrite: false
+                });
+                return new THREE.Mesh(g, m);
+            }
+            const glow1 = makeGlow(6, 0xffcc55, 0.35);
+            const glow2 = makeGlow(9, 0xff9900, 0.18);
+            const glow3 = makeGlow(14, 0xff7700, 0.08);
+            scene.add(glow1, glow2, glow3);
+
+            // --- GALAXIA ESPIRAL DE VERDAD ---
+            // Espiral logarítmica con varios brazos, color por distancia al centro
+            // y grosor de disco que se adelgaza hacia el exterior.
+            const particleCount = 22000;
+            const arms = 4;
+            const spinFactor = 3.2;      // qué tan enrollados están los brazos
+            const armSpread = 0.32;      // dispersión angular dentro de cada brazo
+            const galaxyRadius = 62;
+
+            const particleGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const sizes = new Float32Array(particleCount);
+
+            const colorCore = new THREE.Color(0xfff6d5);   // casi blanco-dorado en el centro
+            const colorGold = new THREE.Color(0xffd700);
+            const colorOrange = new THREE.Color(0xff8c00);
+            const colorDeep = new THREE.Color(0xff5a1f);   // bordes más profundos
+
+            for (let i = 0; i < particleCount; i++) {
+                // radio con más densidad cerca del centro (raíz cuadrada da caída natural)
+                const radiusT = Math.pow(Math.random(), 1.5);
+                const radius = 3 + radiusT * galaxyRadius;
+
+                const armIndex = i % arms;
+                const armOffset = (armIndex / arms) * Math.PI * 2;
+
+                // ángulo de la espiral logarítmica: theta crece con log(radio)
+                const spiralAngle = Math.log(radius) * spinFactor;
+
+                // dispersión dentro del brazo (más ancha lejos del centro)
+                const spread = (Math.random() - 0.5) * armSpread * (1 + radiusT * 1.5);
+
+                const theta = armOffset + spiralAngle + spread;
+
+                // ruido radial para que no sea una línea perfecta
+                const radialNoise = (Math.random() - 0.5) * 2.2 * (0.3 + radiusT);
+
+                const x = Math.cos(theta) * (radius + radialNoise);
+                const z = Math.sin(theta) * (radius + radialNoise);
+
+                // el disco es más grueso cerca del núcleo y muy fino en los bordes
+                const thickness = (1 - radiusT) * 2.6 + 0.25;
+                const y = (Math.random() - 0.5) * thickness * (Math.random() < 0.08 ? 3 : 1);
+
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = z;
+
+                // color en función de la distancia al núcleo
+                let mixed;
+                if (radiusT < 0.15) {
+                    mixed = colorCore.clone().lerp(colorGold, radiusT / 0.15);
+                } else if (radiusT < 0.55) {
+                    mixed = colorGold.clone().lerp(colorOrange, (radiusT - 0.15) / 0.4);
+                } else {
+                    mixed = colorOrange.clone().lerp(colorDeep, (radiusT - 0.55) / 0.45);
+                }
+                // pequeña variación aleatoria de brillo
+                const flicker = 0.85 + Math.random() * 0.3;
+                colors[i * 3] = Math.min(1, mixed.r * flicker);
+                colors[i * 3 + 1] = Math.min(1, mixed.g * flicker);
+                colors[i * 3 + 2] = Math.min(1, mixed.b * flicker);
+
+                sizes[i] = (1 - radiusT) * 0.9 + 0.25 + Math.random() * 0.3;
+            }
+
+            particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            particleGeo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+
+            // Shader propio para que cada partícula tenga su tamaño y un leve parpadeo
+            const particleMat = new THREE.ShaderMaterial({
+                uniforms: { uTime: { value: 0 }, uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) } },
+                vertexShader: `
+                    attribute float aSize;
+                    varying vec3 vColor;
+                    uniform float uTime;
+                    void main() {
+                        vColor = color;
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                        float twinkle = 0.75 + 0.25 * sin(uTime * 2.0 + position.x * 0.5 + position.z * 0.5);
+                        gl_PointSize = aSize * twinkle * (260.0 / -mvPosition.z);
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vColor;
+                    void main() {
+                        float d = length(gl_PointCoord - vec2(0.5));
+                        if (d > 0.5) discard;
+                        float alpha = smoothstep(0.5, 0.0, d);
+                        gl_FragColor = vec4(vColor, alpha);
+                    }
+                `,
+                vertexColors: true,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            const particles = new THREE.Points(particleGeo, particleMat);
+            scene.add(particles);
+
+            // --- ESTRELLAS DE FONDO CON PARPADEO ---
+            const starsCount = 3500;
+            const starsGeo = new THREE.BufferGeometry();
+            const starsPos = new Float32Array(starsCount * 3);
+            const starsSize = new Float32Array(starsCount);
+            const starsPhase = new Float32Array(starsCount);
+
+            for (let i = 0; i < starsCount; i++) {
+                const r = 300 + Math.random() * 500;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos((Math.random() * 2) - 1);
+                starsPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+                starsPos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+                starsPos[i * 3 + 2] = r * Math.cos(phi);
+                starsSize[i] = 0.6 + Math.random() * 1.4;
+                starsPhase[i] = Math.random() * Math.PI * 2;
+            }
+            starsGeo.setAttribute('position', new THREE.BufferAttribute(starsPos, 3));
+            starsGeo.setAttribute('aSize', new THREE.BufferAttribute(starsSize, 1));
+            starsGeo.setAttribute('aPhase', new THREE.BufferAttribute(starsPhase, 1));
+
+            const starsMat = new THREE.ShaderMaterial({
+                uniforms: { uTime: { value: 0 } },
+                vertexShader: `
+                    attribute float aSize;
+                    attribute float aPhase;
+                    uniform float uTime;
+                    varying float vAlpha;
+                    void main() {
+                        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                        vAlpha = 0.4 + 0.6 * (0.5 + 0.5 * sin(uTime * 1.5 + aPhase));
+                        gl_PointSize = aSize * (300.0 / -mvPosition.z);
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `,
+                fragmentShader: `
+                    varying float vAlpha;
+                    void main() {
+                        float d = length(gl_PointCoord - vec2(0.5));
+                        if (d > 0.5) discard;
+                        gl_FragColor = vec4(1.0, 1.0, 1.0, vAlpha * smoothstep(0.5, 0.0, d));
+                    }
+                `,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+
+            const stars = new THREE.Points(starsGeo, starsMat);
+            scene.add(stars);
+
+            // --- TEXTO FLOTANTE 3D ---
+            const phrases = ["Te Quiero", "Mi Girasol", "Mi Universo", "Eres Única", "Eres Mi Sol", "Amiga Del Alma", "Gracias Por Todo", "Mi Persona Favorita"];
+
+            function createTextSprite(message) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 512; canvas.height = 128;
+                ctx.font = 'bold 60px "Georgia", serif';
+                ctx.fillStyle = '#FFD700';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 12;
+                ctx.fillText(message, 256, 64);
+
+                const texture = new THREE.CanvasTexture(canvas);
+                const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: true, depthWrite: false });
+                const sprite = new THREE.Sprite(material);
+                sprite.scale.set(10, 2.5, 1);
+                return sprite;
+            }
+
+            const sprites = [];
+            phrases.forEach((phrase) => {
+                const sprite = createTextSprite(phrase);
+                const radius = 24 + Math.random() * 26;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos((Math.random() * 2) - 1);
+                sprite.position.x = radius * Math.sin(phi) * Math.cos(theta);
+                sprite.position.y = radius * Math.sin(phi) * Math.sin(theta) * 0.4;
+                sprite.position.z = radius * Math.cos(phi);
+                sprite.userData.baseY = sprite.position.y;
+                sprite.userData.phase = Math.random() * Math.PI * 2;
+                scene.add(sprite);
+                sprites.push(sprite);
+            });
+
+            // --- BUCLE DE ANIMACIÓN ---
+            const clock = new THREE.Clock();
+
+            function animate() {
+                requestAnimationFrame(animate);
+                const elapsedTime = clock.getElapsedTime();
+
+                sun.rotation.y = elapsedTime * 0.15;
+                glow1.rotation.y = elapsedTime * 0.1;
+                glow2.rotation.y = -elapsedTime * 0.07;
+
+                particleMat.uniforms.uTime.value = elapsedTime;
+                starsMat.uniforms.uTime.value = elapsedTime;
+
+                // rotación de la galaxia como un disco real
+                particles.rotation.y = elapsedTime * 0.06;
+                stars.rotation.y = elapsedTime * 0.008;
+
+                sprites.forEach(s => {
+                    s.position.y = s.userData.baseY + Math.sin(elapsedTime * 0.6 + s.userData.phase) * 1.2;
+                });
+
+                controls.update();
+                renderer.render(scene, camera);
+            }
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            animate();
+        }
+    </script>
+</body>
+</html>
