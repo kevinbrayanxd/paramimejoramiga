@@ -228,6 +228,44 @@
             z-index: 7;
         }
 
+        /* --- BOTÓN DE MÚSICA --- */
+        .music-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            background: rgba(20, 12, 0, 0.55);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 50;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
+        }
+
+        .music-btn:active {
+            transform: scale(0.92);
+        }
+
+        .music-btn.playing {
+            box-shadow: 0 0 18px rgba(255, 215, 0, 0.55);
+        }
+
+        .music-btn svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .music-btn .icon-play { display: block; }
+        .music-btn .icon-pause { display: none; }
+        .music-btn.playing .icon-play { display: none; }
+        .music-btn.playing .icon-pause { display: block; }
+
         @keyframes pulse {
             0% { transform: scale(0.9); opacity: 0.6; }
             100% { transform: scale(1.1); opacity: 0.9; }
@@ -302,13 +340,27 @@
         <div class="loading-msg" id="loadingMsg">cargando el universo...</div>
         <div class="error-msg" id="errorMsg">No se pudo cargar el universo 3D en este dispositivo.<br>Intenta abrir esta página en Chrome o Safari con conexión a internet.</div>
         <div class="hint">Arrastra con tu dedo para girar el universo 🌌<br>Usa dos dedos para hacer zoom</div>
-        <div id="ytPlayerBox" style="position:fixed; bottom:20px; right:20px; width:220px; height:124px; border-radius:12px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.6); z-index:19;">
-            <div id="ytPlayer" style="width:100%; height:100%;"></div>
-        </div>
-    </div>
 
-    <!-- MÚSICA DE FONDO (YouTube) -->
-    <script src="https://www.youtube.com/iframe_api"></script>
+        <!-- BOTÓN DE MÚSICA: el usuario decide cuándo suena, con un toque -->
+        <button class="music-btn" id="musicBtn" type="button" aria-label="Reproducir música">
+            <svg class="icon-play" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 5v14l12-7-12-7z" fill="#ffd700"/>
+            </svg>
+            <svg class="icon-pause" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="6" y="5" width="4" height="14" fill="#ffd700"/>
+                <rect x="14" y="5" width="4" height="14" fill="#ffd700"/>
+            </svg>
+        </button>
+
+        <!--
+            IMPORTANTE: cambia "musica.mp3" por el nombre real de tu archivo,
+            y súbelo a la MISMA carpeta donde guardes este .html, para que
+            el navegador lo pueda encontrar.
+        -->
+        <audio id="bgMusic" loop preload="none">
+            <source src="musica.mp3" type="audio/mpeg">
+        </audio>
+    </div>
 
     <!-- LIBRERÍAS 3D -->
     <script type="importmap">
@@ -332,22 +384,28 @@
         const errorMsg = document.getElementById('errorMsg');
         let isUniverseStarted = false;
 
-        // --- MÚSICA DE FONDO ---
-        let ytPlayer = null;
-        const ytPlayerBox = document.getElementById('ytPlayerBox');
+        // --- MÚSICA DE FONDO (control manual, no autoplay) ---
+        const musicBtn = document.getElementById('musicBtn');
+        const bgMusic = document.getElementById('bgMusic');
 
-        window.onYouTubeIframeAPIReady = function () {
-            ytPlayer = new YT.Player('ytPlayer', {
-                videoId: 'qOhVBs4u3W8',
-                playerVars: { autoplay: 0, controls: 1, loop: 1, playlist: 'qOhVBs4u3W8', playsinline: 1 }
-            });
-        };
+        musicBtn.addEventListener('click', () => {
+            if (bgMusic.paused) {
+                bgMusic.play().then(() => {
+                    musicBtn.classList.add('playing');
+                }).catch(err => {
+                    console.error('No se pudo reproducir la música:', err);
+                    alert('No se encontró el archivo de música. Revisa que "musica.mp3" esté en la misma carpeta que este archivo.');
+                });
+            } else {
+                bgMusic.pause();
+                musicBtn.classList.remove('playing');
+            }
+        });
 
         startBtn.addEventListener('click', () => {
             // Ocultar tarjeta y mostrar universo
             cardScreen.classList.add('hidden');
             universeScreen.classList.add('active');
-
 
             // Iniciar el motor 3D solo cuando se hace clic
             if (!isUniverseStarted) {
@@ -402,53 +460,155 @@
 
             // Luces
             scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-            const sunLight = new THREE.PointLight(0xffaa33, 4.5, 220, 2);
+            const sunLight = new THREE.PointLight(0xffdd77, 5.5, 260, 2);
             sunLight.position.set(0, 0, 0);
             scene.add(sunLight);
 
-            // --- EL SOL CENTRAL (NÚCLEO DE LA GALAXIA) ---
-            const sunGeo = new THREE.SphereGeometry(4.2, 64, 64);
-            const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff3c4 });
+            // --- EL SOL CENTRAL: superficie turbulenta con shader propio ---
+            const sunGeo = new THREE.SphereGeometry(4.2, 128, 128);
+            const sunMat = new THREE.ShaderMaterial({
+                uniforms: { uTime: { value: 0 } },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        vPosition = position;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+                    uniform float uTime;
+
+                    float hash(vec3 p) {
+                        p = fract(p * 0.3183099 + 0.1);
+                        p *= 17.0;
+                        return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+                    }
+                    float noise(vec3 p) {
+                        vec3 i = floor(p);
+                        vec3 f = fract(p);
+                        f = f * f * (3.0 - 2.0 * f);
+                        return mix(
+                            mix(mix(hash(i), hash(i + vec3(1.0,0.0,0.0)), f.x),
+                                mix(hash(i + vec3(0.0,1.0,0.0)), hash(i + vec3(1.0,1.0,0.0)), f.x), f.y),
+                            mix(mix(hash(i + vec3(0.0,0.0,1.0)), hash(i + vec3(1.0,0.0,1.0)), f.x),
+                                mix(hash(i + vec3(0.0,1.0,1.0)), hash(i + vec3(1.0,1.0,1.0)), f.x), f.y),
+                            f.z);
+                    }
+
+                    void main() {
+                        vec3 p = vPosition * 1.6 + vec3(0.0, uTime * 0.12, uTime * 0.08);
+                        float n = noise(p * 2.0) * 0.6 + noise(p * 5.0) * 0.3 + noise(p * 10.0) * 0.1;
+
+                        vec3 core = vec3(1.0, 0.95, 0.75);
+                        vec3 mid = vec3(1.0, 0.75, 0.25);
+                        vec3 hot = vec3(1.0, 0.5, 0.08);
+
+                        vec3 color = mix(mid, core, n);
+                        color = mix(color, hot, smoothstep(0.55, 0.8, n));
+
+                        vec3 viewDir = normalize(cameraPosition - vPosition);
+                        float fresnel = pow(1.0 - max(dot(vNormal, viewDir), 0.0), 2.0);
+                        color += vec3(1.0, 0.8, 0.4) * fresnel * 0.6;
+
+                        gl_FragColor = vec4(color, 1.0);
+                    }
+                `
+            });
             const sun = new THREE.Mesh(sunGeo, sunMat);
             scene.add(sun);
 
-            // Capas de resplandor (glow) para un núcleo más realista
-            function makeGlow(radius, color, opacity) {
-                const g = new THREE.SphereGeometry(radius, 32, 32);
-                const m = new THREE.MeshBasicMaterial({
-                    color, transparent: true, opacity,
-                    blending: THREE.AdditiveBlending, depthWrite: false
+            // --- CORONA: fresnel puro (brilla en el borde, transparente al centro) ---
+            function makeCorona(radius, colorHex, powFactor, opacity) {
+                const g = new THREE.SphereGeometry(radius, 48, 48);
+                const m = new THREE.ShaderMaterial({
+                    uniforms: {
+                        uColor: { value: new THREE.Color(colorHex) },
+                        uPow: { value: powFactor },
+                        uOpacity: { value: opacity }
+                    },
+                    vertexShader: `
+                        varying vec3 vNormal;
+                        varying vec3 vViewPos;
+                        void main() {
+                            vNormal = normalize(normalMatrix * normal);
+                            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                            vViewPos = mv.xyz;
+                            gl_Position = projectionMatrix * mv;
+                        }
+                    `,
+                    fragmentShader: `
+                        varying vec3 vNormal;
+                        varying vec3 vViewPos;
+                        uniform vec3 uColor;
+                        uniform float uPow;
+                        uniform float uOpacity;
+                        void main() {
+                            vec3 viewDir = normalize(-vViewPos);
+                            float fresnel = pow(1.0 - max(dot(vNormal, viewDir), 0.0), uPow);
+                            gl_FragColor = vec4(uColor, fresnel * uOpacity);
+                        }
+                    `,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    side: THREE.BackSide
                 });
                 return new THREE.Mesh(g, m);
             }
-            const glow1 = makeGlow(6, 0xffcc55, 0.35);
-            const glow2 = makeGlow(9, 0xff9900, 0.18);
-            const glow3 = makeGlow(14, 0xff7700, 0.08);
-            scene.add(glow1, glow2, glow3);
+            const corona1 = makeCorona(5.2, 0xffcc55, 2.0, 0.9);
+            const corona2 = makeCorona(8, 0xff9933, 2.4, 0.55);
+            const corona3 = makeCorona(13, 0xff7700, 3.0, 0.3);
+            scene.add(corona1, corona2, corona3);
+
+            // Halo extra tipo "bloom": sprite con degradado radial que siempre mira a cámara
+            function makeGlowSprite(size, colorHex, opacity) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256; canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+                const c = new THREE.Color(colorHex);
+                const rgb = Math.round(c.r * 255) + ',' + Math.round(c.g * 255) + ',' + Math.round(c.b * 255);
+                grad.addColorStop(0, 'rgba(' + rgb + ',' + opacity + ')');
+                grad.addColorStop(1, 'rgba(' + rgb + ',0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, 256, 256);
+                const texture = new THREE.CanvasTexture(canvas);
+                const material = new THREE.SpriteMaterial({ map: texture, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+                const sprite = new THREE.Sprite(material);
+                sprite.scale.set(size, size, 1);
+                return sprite;
+            }
+            const bloomSprite = makeGlowSprite(48, 0xffbb44, 0.85);
+            scene.add(bloomSprite);
 
             // --- GALAXIA ESPIRAL DE VERDAD ---
             // Espiral logarítmica con varios brazos, color por distancia al centro
-            // y grosor de disco que se adelgaza hacia el exterior.
-            const particleCount = 22000;
-            const arms = 4;
-            const spinFactor = 3.2;      // qué tan enrollados están los brazos
-            const armSpread = 0.32;      // dispersión angular dentro de cada brazo
-            const galaxyRadius = 62;
+            // y un hueco cerca del núcleo para que el sol se vea nítido, sin
+            // que las partículas se mezclen con su resplandor y se vea "quemado".
+            const particleCount = 16000;
+            const arms = 3;
+            const spinFactor = 3.0;      // qué tan enrollados están los brazos
+            const armSpread = 0.28;      // dispersión angular dentro de cada brazo
+            const innerRadius = 16;      // hueco alrededor del núcleo
+            const outerRadius = 70;
 
             const particleGeo = new THREE.BufferGeometry();
             const positions = new Float32Array(particleCount * 3);
             const colors = new Float32Array(particleCount * 3);
             const sizes = new Float32Array(particleCount);
 
-            const colorCore = new THREE.Color(0xfff6d5);   // casi blanco-dorado en el centro
             const colorGold = new THREE.Color(0xffd700);
             const colorOrange = new THREE.Color(0xff8c00);
             const colorDeep = new THREE.Color(0xff5a1f);   // bordes más profundos
 
             for (let i = 0; i < particleCount; i++) {
-                // radio con más densidad cerca del centro (raíz cuadrada da caída natural)
-                const radiusT = Math.pow(Math.random(), 1.5);
-                const radius = 3 + radiusT * galaxyRadius;
+                // radio: más densidad cerca del hueco interior, se dispersa hacia afuera
+                const radiusT = Math.pow(Math.random(), 1.15);
+                const radius = innerRadius + radiusT * (outerRadius - innerRadius);
 
                 const armIndex = i % arms;
                 const armOffset = (armIndex / arms) * Math.PI * 2;
@@ -457,19 +617,19 @@
                 const spiralAngle = Math.log(radius) * spinFactor;
 
                 // dispersión dentro del brazo (más ancha lejos del centro)
-                const spread = (Math.random() - 0.5) * armSpread * (1 + radiusT * 1.5);
+                const spread = (Math.random() - 0.5) * armSpread * (1 + radiusT * 1.3);
 
                 const theta = armOffset + spiralAngle + spread;
 
-                // ruido radial para que no sea una línea perfecta
-                const radialNoise = (Math.random() - 0.5) * 2.2 * (0.3 + radiusT);
+                // ruido radial suave para que no sea una línea perfecta
+                const radialNoise = (Math.random() - 0.5) * 2.0 * (0.4 + radiusT);
 
                 const x = Math.cos(theta) * (radius + radialNoise);
                 const z = Math.sin(theta) * (radius + radialNoise);
 
-                // el disco es más grueso cerca del núcleo y muy fino en los bordes
-                const thickness = (1 - radiusT) * 2.6 + 0.25;
-                const y = (Math.random() - 0.5) * thickness * (Math.random() < 0.08 ? 3 : 1);
+                // disco fino y parejo, con muy poca dispersión vertical
+                const thickness = (1 - radiusT) * 1.6 + 0.2;
+                const y = (Math.random() - 0.5) * thickness;
 
                 positions[i * 3] = x;
                 positions[i * 3 + 1] = y;
@@ -477,12 +637,10 @@
 
                 // color en función de la distancia al núcleo
                 let mixed;
-                if (radiusT < 0.15) {
-                    mixed = colorCore.clone().lerp(colorGold, radiusT / 0.15);
-                } else if (radiusT < 0.55) {
-                    mixed = colorGold.clone().lerp(colorOrange, (radiusT - 0.15) / 0.4);
+                if (radiusT < 0.45) {
+                    mixed = colorGold.clone().lerp(colorOrange, radiusT / 0.45);
                 } else {
-                    mixed = colorOrange.clone().lerp(colorDeep, (radiusT - 0.55) / 0.45);
+                    mixed = colorOrange.clone().lerp(colorDeep, (radiusT - 0.45) / 0.55);
                 }
                 // pequeña variación aleatoria de brillo
                 const flicker = 0.85 + Math.random() * 0.3;
@@ -490,7 +648,7 @@
                 colors[i * 3 + 1] = Math.min(1, mixed.g * flicker);
                 colors[i * 3 + 2] = Math.min(1, mixed.b * flicker);
 
-                sizes[i] = (1 - radiusT) * 0.9 + 0.25 + Math.random() * 0.3;
+                sizes[i] = (1 - radiusT) * 0.7 + 0.3 + Math.random() * 0.25;
             }
 
             particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -507,8 +665,9 @@
                     void main() {
                         vColor = color;
                         vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                        float twinkle = 0.75 + 0.25 * sin(uTime * 2.0 + position.x * 0.5 + position.z * 0.5);
-                        gl_PointSize = aSize * twinkle * (260.0 / -mvPosition.z);
+                        float twinkle = 0.8 + 0.2 * sin(uTime * 2.0 + position.x * 0.5 + position.z * 0.5);
+                        float size = aSize * twinkle * (220.0 / -mvPosition.z);
+                        gl_PointSize = clamp(size, 1.0, 9.0);
                         gl_Position = projectionMatrix * mvPosition;
                     }
                 `,
@@ -517,7 +676,7 @@
                     void main() {
                         float d = length(gl_PointCoord - vec2(0.5));
                         if (d > 0.5) discard;
-                        float alpha = smoothstep(0.5, 0.0, d);
+                        float alpha = smoothstep(0.5, 0.0, d) * 0.9;
                         gl_FragColor = vec4(vColor, alpha);
                     }
                 `,
@@ -623,9 +782,19 @@
                 requestAnimationFrame(animate);
                 const elapsedTime = clock.getElapsedTime();
 
-                sun.rotation.y = elapsedTime * 0.15;
-                glow1.rotation.y = elapsedTime * 0.1;
-                glow2.rotation.y = -elapsedTime * 0.07;
+                sun.rotation.y = elapsedTime * 0.05;
+                sunMat.uniforms.uTime.value = elapsedTime;
+
+                corona1.rotation.y = elapsedTime * 0.08;
+                corona2.rotation.y = -elapsedTime * 0.05;
+                corona3.rotation.y = elapsedTime * 0.03;
+
+                // parpadeo sutil de la luz, como una llama real
+                sunLight.intensity = 5.5 + Math.sin(elapsedTime * 3.1) * 0.4 + Math.sin(elapsedTime * 7.3) * 0.2;
+
+                // el halo respira lentamente
+                const bloomPulse = 1 + Math.sin(elapsedTime * 1.2) * 0.06;
+                bloomSprite.scale.set(48 * bloomPulse, 48 * bloomPulse, 1);
 
                 particleMat.uniforms.uTime.value = elapsedTime;
                 starsMat.uniforms.uTime.value = elapsedTime;
